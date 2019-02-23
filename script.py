@@ -8,6 +8,8 @@ import datetime
 import shutil
 
 # check if wiki folder exists, if yes then delete existing folder
+_MAX_COUNT=5
+_GREETING ="Welcome,\n"
 _folder = "reader-mediacenterjs.wiki"
 _commit = str(subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']))
 _branch = subprocess.check_output(['git','branch','-r']).split('\n')[1].split('/')[1]
@@ -27,29 +29,32 @@ if(not os.path.isfile(filename+'.zip')):
         print "file zipped"
 else:
         print exit
-		
-with open('testpage.md','a+') as f:
-        f.write("\n["+filename+"] ("+filename+".zip)" )
-        f.close()
+artifacts = []
+
+with open('testpage.md', 'r') as f:
+	artifacts = f.readlines()
+	artifacts = filter(lambda x: x.find('.zip')!=-1, artifacts)
+	if(len(artifacts)== _MAX_COUNT):
+		searchObj = re.search( r'[\(](.*)[\)]', artifacts[0], re.M|re.I)
+		if searchObj:
+			file_to_be_removed = searchObj.group(1)
+			subprocess.call(['git','rm',file_to_be_removed])
+			print 'Artifact removed: '+ file_to_be_removed
+		else:
+			print 'No Artifact found to remove'
+
+	artifacts = [x.strip('\n') for x in artifacts][0:_MAX_COUNT]
+	artifacts.append('['+filename+'] ('+filename+'.zip)')
+	print 'contents '+str(artifacts)
+with open('testpage.md', 'w+') as f:
+	f.write('\n'.join(artifacts))
+	f.close()
+
         
 print subprocess.check_output(['git', 'status','-s'])
-os.system('git add %s.zip '%filename)
-os.system('git add testpage.md')
-os.system("git commit -m 'Uploading artifacts'")
+subprocess.call(["git","add","{0}.zip".format(filename)])
+subprocess.call(["git","add","testpage.md"])
+subprocess.call(["git","commit","-m"," 'Uploading artifacts'"])
 print "changes commit"
-os.system('git push')
+subprocess.call(["git","push"])
 os.chdir("../")
-##def get_file_count():
-##    zipCounter = len(glob.glob1("./reader-mediacenterjs.wiki","*.zip"))
-##    print zipCounter
-#def get_delete_old_files():
-##    now = time.time()
-##    folder = './folder_name'
-##    #files = [os.path.join(folder, filename) for filename in os.listdir(folder)]
-##    for dirpath, dirnames, filenames in os.walk(folder):
-##        for filename in filenames:
-##            curpath = os.path.join(dirpath,filename)
-##            if filename.endswith(".zip"):
-##                #file_modified = datetime.datetime.fromtimestamp(os.path.getmtime(curpath))
-##                #if datetime.datetime.now() - file_modified > datetime.timedelta(hours=1):
-##                    #os.remove(curpath)
